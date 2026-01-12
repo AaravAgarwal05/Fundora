@@ -3,9 +3,44 @@ import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { signOutUser } from "../lib/auth";
 import { FaEnvelope } from "react-icons/fa";
+import { FiMenu } from "react-icons/fi";
 import { useRouter } from "next/router";
 
-export default function Navbar() {
+/* -------------------------------------------
+   MENU ITEM HELPER (UI ONLY)
+------------------------------------------- */
+function MenuItem({ href, onClick, label, danger }) {
+  const base =
+    "block w-full px-4 py-2.5 text-sm transition rounded-md mx-1";
+
+  const normal =
+    "text-slate-200 hover:bg-slate-700/60 hover:text-white";
+
+  const dangerStyle =
+    "text-red-400 hover:bg-red-500/10 hover:text-red-300";
+
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className={`${base} ${danger ? dangerStyle : normal}`}
+      >
+        {label}
+      </Link>
+    );
+  }
+
+  return (
+    <button
+      onClick={onClick}
+      className={`${base} ${danger ? dangerStyle : normal} text-left`}
+    >
+      {label}
+    </button>
+  );
+}
+
+export default function Navbar({ onToggleFilters }) {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -54,6 +89,15 @@ export default function Navbar() {
     return () => listener?.subscription?.unsubscribe();
   }, []);
 
+  /* ---------------- START PROJECT ---------------- */
+  const handleStartProject = () => {
+    if (!user) {
+      router.push("/login?redirect=/create");
+    } else {
+      router.push("/create");
+    }
+  };
+
   /* ---------------- UNREAD DM COUNT ---------------- */
   async function loadUnread(userId) {
     const { count } = await supabase
@@ -72,35 +116,41 @@ export default function Navbar() {
     }`;
 
   return (
-    <header className="sticky top-0 z-20 border-b border-slate-800 bg-slate-900/95 backdrop-blur">
+    <header className="sticky top-0 z-50 border-b border-slate-800 bg-slate-900/95 backdrop-blur">
       <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
 
-     {/* LEFT */}
-<div className="flex items-center gap-3">
-  <Link href="/" className="flex items-center gap-2">
-    <img
-      src="/logo.png"
-      alt="Fundora"
-      className="h-10 w-auto object-contain"
-    />
-    <span className="text-xl font-semibold text-white">
-      Fundora
-    </span>
-  </Link>
-</div>
+        {/* LEFT */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onToggleFilters}
+            className="text-slate-300 hover:text-white p-2 rounded-md hover:bg-slate-800"
+            aria-label="Open filters"
+          >
+            <FiMenu size={22} />
+          </button>
 
+          <Link href="/" className="flex items-center gap-2">
+            <img src="/logo.png" alt="Fundora" className="h-10 w-auto" />
+            <span className="text-xl font-semibold text-white">Fundora</span>
+          </Link>
+        </div>
 
-          <div className="hidden md:flex items-center gap-5 text-sm text-slate-300">
-            <Link href="/" className="hover:text-blue-400">Explore</Link>
-            <Link href="/create" className="hover:text-blue-400">
-              Start a project
-            </Link>
-          </div>
-        
+        {/* CENTER */}
+        <div className="hidden md:flex items-center gap-5 text-sm text-slate-300">
+          <Link href="/explore" className="hover:text-blue-400">
+            Explore
+          </Link>
+
+          <button
+            onClick={handleStartProject}
+            className="hover:text-blue-400"
+          >
+            Start a project
+          </button>
+        </div>
 
         {/* RIGHT */}
         <div className="flex items-center gap-4">
-
           {!user && (
             <>
               <Link
@@ -121,22 +171,21 @@ export default function Navbar() {
 
           {user && (
             <>
-              {/* ✉️ MESSAGES ICON WITH BADGE */}
+              {/* MESSAGES */}
               <Link
                 href="/dm"
                 className="relative text-slate-300 hover:text-white"
               >
                 <FaEnvelope size={18} />
-
                 {unreadCount > 0 && (
                   <span className="absolute -top-1 -right-1 bg-red-600 text-white
-                                   text-[10px] w-5 h-5 rounded-full flex items-center justify-center">
+                    text-[10px] w-5 h-5 rounded-full flex items-center justify-center">
                     {unreadCount}
                   </span>
                 )}
               </Link>
 
-              {/* AVATAR */}
+              {/* AVATAR + MENU */}
               <div className="relative">
                 <img
                   src={avatarSrc}
@@ -145,70 +194,48 @@ export default function Navbar() {
                 />
 
                 {menuOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-lg py-2 shadow-xl">
+                  <div className="absolute right-0 mt-3 w-60 rounded-2xl bg-slate-900/95 backdrop-blur
+                                  border border-slate-700 shadow-2xl overflow-hidden z-50">
 
-                    <Link
-                      href={`/creator/${user.id}`}
-                      className="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-700"
-                      onClick={() => setMenuOpen(false)}
-                    >
-                      View Profile
-                    </Link>
-                    <button
-                       onClick={() => router.push("/creator/payments")}
-                       className="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-700"
-                    >
-                      Funds-Got
-                    </button>
+                    {/* PROFILE HEADER */}
+                    <div className="px-4 py-3 border-b border-slate-700">
+                      <p className="text-sm font-semibold text-white truncate">
+                        {profile?.full_name || user?.email}
+                      </p>
+                      <p className="text-xs text-slate-400">
+                        Account menu
+                      </p>
+                    </div>
 
-                    <button
-                       type="button"
-                       onClick={() => router.push("/creator/profile")}
-                       className="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-700"
-                    >
-                      Edit Payment Portal
-                    </button> 
-                    <Link
-  href="/payments"
-  className="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-700"
->
-  My Payments
-</Link>
-                   
-                    <Link
-                      href="/creator/edit"
-                      className="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-700"
-                      onClick={() => setMenuOpen(false)}
-                    >
-                      Edit Profile
-                    </Link>
+                    {/* ITEMS */}
+                    <div className="py-2">
+                      <MenuItem href={`/creator/${user.id}`} label="View Profile" />
+                      <MenuItem onClick={() => router.push("/creator/payments")} label="Funds-Got" />
+                      <MenuItem onClick={() => router.push("/creator/profile")} label="Edit Payment Portal" />
+                      <MenuItem href="/payments" label="My Payments" />
+                      <MenuItem href="/creator/edit" label="Edit Profile" />
+                      <MenuItem href="/followers" label="Followers" />
 
-                    <Link
-                      href="/followers"
-                      className="block px-4 py-2 text-sm text-slate-300 hover:text-white hover:bg-slate-700"
-                      onClick={() => setMenuOpen(false)}
-                    >
-                      Followers
-                    </Link>
+                      <div className="my-2 border-t border-slate-700" />
 
-                    <Link
-                      href="/account/delete"
-                      className="block px-4 py-2 text-sm text-red-400 hover:bg-slate-700"
-                    >
-                      Delete Account
-                    </Link>
+                      <MenuItem
+                        href="/account/delete"
+                        label="Delete Account"
+                        danger
+                      />
 
-                    <button
-                      onClick={async () => {
-                        await signOutUser();
-                        setMenuOpen(false);
-                        setUser(null);
-                      }}
-                      className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-slate-700"
-                    >
-                      Logout
-                    </button>
-
+                      <button
+                        onClick={async () => {
+                          await signOutUser();
+                          setMenuOpen(false);
+                          setUser(null);
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-sm text-red-400
+                                   hover:bg-red-500/10 hover:text-red-300 transition"
+                      >
+                        Logout
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

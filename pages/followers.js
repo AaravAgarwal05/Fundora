@@ -10,6 +10,11 @@ export default function FollowersPage() {
   const [list, setList] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  /* 🔹 NEW: SEARCH STATE */
+  const [search, setSearch] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+
   /* ---------------- AUTH ---------------- */
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -19,14 +24,13 @@ export default function FollowersPage() {
 
   /* ---------------- LOAD DATA ---------------- */
   useEffect(() => {
-    if (!user) return;
+    if (!user || search) return;
     loadConnections();
-  }, [user, tab]);
+  }, [user, tab, search]);
 
   async function loadConnections() {
     setLoading(true);
 
-    // 1️⃣ Get follower IDs
     const { data: followRows, error } = await supabase
       .from("followers")
       .select(tab === "followers" ? "follower_id" : "following_id")
@@ -41,12 +45,10 @@ export default function FollowersPage() {
       return;
     }
 
-    // 2️⃣ Extract profile IDs
     const ids = followRows.map((r) =>
       tab === "followers" ? r.follower_id : r.following_id
     );
 
-    // 3️⃣ Fetch profiles
     const { data: profiles } = await supabase
       .from("profiles")
       .select("id, full_name, avatar_url")
@@ -55,6 +57,29 @@ export default function FollowersPage() {
     setList(profiles || []);
     setLoading(false);
   }
+
+  /* ---------------- 🔍 SEARCH USERS ---------------- */
+  useEffect(() => {
+    if (!search.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setSearching(true);
+
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, full_name, avatar_url")
+        .ilike("full_name", `%${search}%`)
+        .limit(10);
+
+      setSearchResults(data || []);
+      setSearching(false);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [search]);
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-900">
@@ -66,7 +91,7 @@ export default function FollowersPage() {
         </h1>
 
         {/* TABS */}
-        <div className="flex justify-center gap-4 mb-10">
+        <div className="flex justify-center gap-4 mb-6">
           <button
             onClick={() => setTab("followers")}
             className={`px-4 py-2 rounded-lg text-sm ${
@@ -90,18 +115,38 @@ export default function FollowersPage() {
           </button>
         </div>
 
-        {/* LIST */}
-        {loading ? (
-          <p className="text-center text-slate-400">Loading...</p>
-        ) : list.length === 0 ? (
-          <p className="text-center text-slate-400">No users found.</p>
-        ) : (
-          <div className="space-y-4">
-            {list.map((p) => (
+        {/* 🔍 SEARCH BAR (NEW) */}
+        <div className="mb-8">
+          <input
+            type="text"
+            placeholder="Search users by name..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700
+                       text-white placeholder-slate-400 focus:outline-none
+                       focus:ring-2 focus:ring-cyan-500 transition"
+          />
+        </div>
+
+        {/* 🔍 SEARCH RESULTS */}
+        {search && (
+          <div className="space-y-4 mb-10">
+            {searching && (
+              <p className="text-center text-slate-400">Searching...</p>
+            )}
+
+            {!searching && searchResults.length === 0 && (
+              <p className="text-center text-slate-400">
+                No users found.
+              </p>
+            )}
+
+            {searchResults.map((p) => (
               <Link
                 key={p.id}
                 href={`/creator/${p.id}`}
-                className="flex items-center gap-4 bg-slate-800/70 border border-slate-700 rounded-lg p-4 hover:bg-slate-700 transition"
+                className="flex items-center gap-4 bg-slate-800/70 border border-slate-700
+                           rounded-lg p-4 hover:bg-slate-700 transition"
               >
                 <img
                   src={
@@ -118,6 +163,41 @@ export default function FollowersPage() {
               </Link>
             ))}
           </div>
+        )}
+
+        {/* ORIGINAL LIST (UNCHANGED) */}
+        {!search && (
+          <>
+            {loading ? (
+              <p className="text-center text-slate-400">Loading...</p>
+            ) : list.length === 0 ? (
+              <p className="text-center text-slate-400">No users found.</p>
+            ) : (
+              <div className="space-y-4">
+                {list.map((p) => (
+                  <Link
+                    key={p.id}
+                    href={`/creator/${p.id}`}
+                    className="flex items-center gap-4 bg-slate-800/70 border border-slate-700
+                               rounded-lg p-4 hover:bg-slate-700 transition"
+                  >
+                    <img
+                      src={
+                        p.avatar_url ||
+                        `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                          p.full_name || "User"
+                        )}&background=0D8ABC&color=fff`
+                      }
+                      className="w-12 h-12 rounded-full border border-slate-600"
+                    />
+                    <span className="text-white font-medium">
+                      {p.full_name || "Unnamed User"}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </main>
 

@@ -1,178 +1,90 @@
-// pages/index.js
-import { useEffect, useState } from "react";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
-import ProjectCard from "../components/ProjectCard";
-import { supabase } from "../lib/supabaseClient";
+import { motion } from "framer-motion";
+import { useRouter } from "next/router";
+import TypingText from "../components/TypingText";
 
-export default function Home() {
-  const [projects, setProjects] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [activeFilter, setActiveFilter] = useState("All");
+export default function HomeHero() {
+  const router = useRouter();
 
-  // ✅ SEARCH (WORKING VERSION)
-  const [query, setQuery] = useState("");
-  const [suggestions, setSuggestions] = useState([]);
-
-  /* =====================================================
-     FILTERS — MUST MATCH Create Page + DB VALUES
-     DB: categories TEXT[]
-  ===================================================== */
-  const FILTERS = [
-    { key: "All", label: "All" },
-    { key: "Trending", label: "Trending" },
-    { key: "New", label: "New" },
-    { key: "MostFunded", label: "Most Funded" },
-    { key: "EndingSoon", label: "Ending Soon" },
-
-    // Categories
-    { key: "AI & ML", label: "AI & ML" },
-    { key: "Technology", label: "Technology" },
-    { key: "Food", label: "Food" },
-    { key: "Education", label: "Education" },
-    { key: "Health", label: "Health" },
-    { key: "Environment", label: "Environment" },
-    { key: "Art", label: "Art & Design" },
-  ];
-
-  /* =====================================================
-     LOAD PROJECTS — FIXED & FINAL
-  ===================================================== */
-  async function loadProjects(filter) {
-    setLoading(true);
-
-    let q = supabase.from("projects").select("*");
-
-    switch (filter) {
-      case "Trending":
-        q = q.order("pledged", { ascending: false });
-        break;
-
-      case "New":
-        q = q.order("created_at", { ascending: false });
-        break;
-
-      case "MostFunded":
-        q = q.order("goal", { ascending: false });
-        break;
-
-      case "EndingSoon":
-        q = q.order("deadline", { ascending: true });
-        break;
-
-      case "All":
-        q = q.order("created_at", { ascending: false });
-        break;
-
-      default:
-        // ✅ CORRECT WAY FOR text[] CATEGORY FILTER
-        q = q.contains("categories", [filter]);
-    }
-
-    const { data, error } = await q;
-
-    if (!error) setProjects(data || []);
-    setLoading(false);
-  }
-
-  useEffect(() => {
-    loadProjects(activeFilter);
-  }, [activeFilter]);
-
-  /* =====================================================
-     SEARCH SUGGESTIONS — RESTORED (WORKING)
-  ===================================================== */
-  useEffect(() => {
-    if (!query.trim()) {
-      setSuggestions([]);
-      return;
-    }
-
-    const timer = setTimeout(async () => {
-      const { data } = await supabase
-        .from("projects")
-        .select("id, title, short")
-        .ilike("title", `%${query}%`)
-        .limit(5);
-
-      setSuggestions(data || []);
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [query]);
-
-  /* =====================================================
-     UI
-  ===================================================== */
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
+    <div className="relative min-h-screen flex items-center justify-center text-center text-white overflow-hidden">
 
-      <main className="flex-1 p-6 max-w-6xl mx-auto">
-        {/* HEADER */}
-        <div className="flex justify-between mb-6">
-          <h1 className="text-2xl font-bold text-white">Explore projects</h1>
-          <a href="/create" className="btn-primary">Start a project</a>
-        </div>
+      {/* AURORA BACKGROUND */}
+      <div className="aurora-bg" />
 
-        {/* SEARCH */}
-        <div className="relative mb-6">
-          <input
-            className="w-full px-4 py-3 rounded bg-slate-900 border border-slate-700 text-white"
-            placeholder="Search projects..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
+      {/* CONTENT */}
+      <div className="z-10 max-w-3xl px-6">
+
+        {/* FLOATING LOGO */}
+        <motion.img
+          src="/logo.png"
+          alt="Fundora"
+          className="mx-auto w-36 h-36 rounded-full bg-white p-4 shadow-2xl"
+          animate={{ y: [0, -12, 0] }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+        />
+
+        {/* TITLE */}
+<motion.h1
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ delay: 0.4 }}
+  className="mt-4 text-6xl md:text-7xl font-extrabold tracking-tight text-transparent bg-clip-text"
+  style={{
+    backgroundImage:
+      "linear-gradient(90deg, #3b82f6, #22d3ee, #a855f7, #3b82f6)",
+    backgroundSize: "300% 100%",
+  }}
+>
+  <motion.span
+    animate={{ backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"] }}
+    transition={{
+      duration: 6,
+      repeat: Infinity,
+      ease: "linear",
+    }}
+    className="block bg-inherit bg-clip-text"
+  >
+    Fundora
+  </motion.span>
+</motion.h1>
+
+
+        {/* TAGLINE (WORD REVEAL) */}
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.8 }}
+          className="mt-4 text-xl md:text-2xl text-slate-300"
+
+        >
+          <TypingText
+            text="Fund ideas. Fuel innovation. Empower creators to build the future together."
           />
+        </motion.p>
 
-          {/* SEARCH SUGGESTIONS */}
-          {query && suggestions.length > 0 && (
-            <div className="absolute left-0 right-0 mt-1 bg-slate-900 border border-slate-700 rounded-lg z-20">
-              {suggestions.map((s) => (
-                <a
-                  key={s.id}
-                  href={`/projects/${s.id}`}
-                  className="block px-4 py-2 hover:bg-slate-800 text-white border-b border-slate-800"
-                >
-                  <div className="font-semibold text-blue-300">{s.title}</div>
-                  <div className="text-xs text-slate-400">{s.short}</div>
-                </a>
-              ))}
-            </div>
-          )}
-        </div>
+        {/* SUBTEXT */}
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.6 }}
+         className="mt-2 text-base text-slate-400"
 
-        {/* FILTERS */}
-        <div className="flex gap-2 mb-6 overflow-x-auto">
-          {FILTERS.map((f) => (
-            <button
-              key={f.key}
-              onClick={() => setActiveFilter(f.key)}
-              className={`px-4 py-1.5 rounded-full text-xs border ${
-                activeFilter === f.key
-                  ? "bg-blue-600 text-white"
-                  : "bg-slate-800 text-slate-300"
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
+        >
+          Where ideas rise, communities unite, and the future is funded together.
+        </motion.p>
 
-        {/* PROJECT GRID */}
-        {loading ? (
-          <p className="text-slate-400">Loading...</p>
-        ) : projects.length === 0 ? (
-          <p className="text-slate-400">No projects found.</p>
-        ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {projects.map((p) => (
-              <ProjectCard key={p.id} project={p} />
-            ))}
-          </div>
-        )}
-      </main>
-
-      <Footer />
+        {/* CTA BUTTON */}
+        <motion.button
+          whileHover={{ scale: 1.08 }}
+          whileTap={{ scale: 0.95 }}
+          animate={{ boxShadow: ["0 0 0px #2563eb", "0 0 25px #2563eb", "0 0 0px #2563eb"] }}
+          transition={{ duration: 2.5, repeat: Infinity }}
+          onClick={() => router.push("/explore")}
+          className="mt-10 px-8 py-4 rounded-full bg-blue-600 text-lg font-semibold shadow-xl"
+        >
+          Let’s Contribute Together for the Future
+        </motion.button>
+      </div>
     </div>
   );
 }

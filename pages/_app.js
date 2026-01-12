@@ -1,4 +1,5 @@
 import "@/styles/globals.css";
+import "../styles/aurora.css";
 import AnimatedBackground from "../components/AnimatedBackground";
 import { FollowProvider } from "../context/FollowContext";
 

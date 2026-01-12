@@ -1,0 +1,38 @@
+.aurora-bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  z-index: -1;
+}
+
+.aurora-bg::before,
+.aurora-bg::after {
+  content: "";
+  position: absolute;
+  width: 120%;
+  height: 120%;
+  background: linear-gradient(
+    120deg,
+    rgba(56,189,248,0.35),
+    rgba(139,92,246,0.35),
+    rgba(236,72,153,0.35)
+  );
+  filter: blur(120px);
+  animation: auroraMove 18s linear infinite;
+}
+
+.aurora-bg::after {
+  animation-delay: -9s;
+}
+
+@keyframes auroraMove {
+  0% {
+    transform: translate(-20%, -20%) rotate(0deg);
+  }
+  50% {
+    transform: translate(20%, 20%) rotate(180deg);
+  }
+  100% {
+    transform: translate(-20%, -20%) rotate(360deg);
+  }
+}

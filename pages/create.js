@@ -42,6 +42,14 @@ export default function CreateProjectPage() {
   const [thumbnailFile, setThumbnailFile] = useState(null);
   const [files, setFiles] = useState([]);
   const [team, setTeam] = useState([{ name: "", role: "" }]);
+  
+useEffect(() => {
+  supabase.auth.getUser().then(({ data }) => {
+    if (!data?.user) {
+      router.replace("/login?redirect=/create");
+    }
+  });
+}, []);
 
   function addTeamMember() {
     setTeam((t) => [...t, { name: "", role: "" }]);
