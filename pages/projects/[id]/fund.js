@@ -14,6 +14,7 @@ export default function FundProject() {
   const [donors, setDonors] = useState([]);
   const [amount, setAmount] = useState("");
   const [loading, setLoading] = useState(false);
+  const [razorpayLoaded, setRazorpayLoaded] = useState(false);
 
   /* ---------------- LOAD DATA ---------------- */
   useEffect(() => {
@@ -78,8 +79,8 @@ export default function FundProject() {
       return;
     }
 
-    if (typeof window === "undefined" || !window.Razorpay) {
-      alert("Razorpay SDK not loaded. Please refresh.");
+    if (typeof window === "undefined" || !window.Razorpay || !razorpayLoaded) {
+      alert("Payment system is loading. Please wait a moment and try again.");
       return;
     }
 
@@ -105,12 +106,12 @@ export default function FundProject() {
 
       /* 2️⃣ Open Razorpay Checkout */
       const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        key: data.key || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
         amount: data.amount,
         currency: data.currency,
         name: project?.title || "Fundora",
         description: "Support this project",
-        order_id: data.id,
+        order_id: data.orderId || data.id,
 
         handler: async function (response) {
           const verifyRes = await fetch("/api/razorpay/verify", {
@@ -155,6 +156,11 @@ export default function FundProject() {
       <Script
         src="https://checkout.razorpay.com/v1/checkout.js"
         strategy="afterInteractive"
+        onLoad={() => setRazorpayLoaded(true)}
+        onError={() => {
+          console.error('Failed to load Razorpay script');
+          setRazorpayLoaded(false);
+        }}
       />
 
       <div className="min-h-screen flex flex-col">
@@ -197,10 +203,15 @@ export default function FundProject() {
 
             <button
               onClick={handlePayment}
-              disabled={loading}
-              className="btn-primary w-full"
+              disabled={loading || !razorpayLoaded || !amount || Number(amount) <= 0}
+              className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? "Processing..." : "Pay with Razorpay"}
+              {!razorpayLoaded 
+                ? "Loading Payment System..." 
+                : loading 
+                  ? "Processing..." 
+                  : "Pay with Razorpay"
+              }
             </button>
           </div>
 

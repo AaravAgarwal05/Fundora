@@ -13,11 +13,16 @@ export default function FundButton({ projectId, amount }) {
 
     const order = await orderRes.json();
 
+    if (!order.id && !order.orderId) {
+      alert('Order creation failed');
+      return;
+    }
+
     const options = {
-      key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+      key: order.key || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
       amount: order.amount,
       currency: "INR",
-      order_id: order.id,
+      order_id: order.orderId || order.id,
       name: "Fundora",
       description: "Project Funding",
       handler: async function (response) {
