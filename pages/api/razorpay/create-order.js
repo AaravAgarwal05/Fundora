@@ -12,6 +12,11 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Invalid amount" });
     }
 
+    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+      console.error("Missing Razorpay credentials");
+      return res.status(500).json({ error: "Payment system not configured" });
+    }
+
     const razorpay = new Razorpay({
       key_id: process.env.RAZORPAY_KEY_ID,
       key_secret: process.env.RAZORPAY_KEY_SECRET,
@@ -20,13 +25,15 @@ export default async function handler(req, res) {
     const order = await razorpay.orders.create({
       amount: amount * 100, // rupees → paise
       currency: "INR",
-      receipt: `p_${Date.now()}`, // ✅ FIXED
+      receipt: `p_${Date.now()}`,
     });
 
     return res.status(200).json({
+      id: order.id,
       orderId: order.id,
       amount: order.amount,
       currency: order.currency,
+      key: process.env.RAZORPAY_KEY_ID,
     });
   } catch (err) {
     console.error("Razorpay order error:", err);

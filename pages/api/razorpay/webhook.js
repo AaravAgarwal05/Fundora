@@ -50,7 +50,7 @@ export default async function handler(req, res) {
     });
 
     // 2️⃣ Update pledged amount
-    await supabase.rpc("increment_project_pledge", {
+    await supabase.rpc("increment_project_funding", {
       project_id: projectId,
       amount,
     });
