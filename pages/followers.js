@@ -9,20 +9,34 @@ export default function FollowersPage() {
   const [tab, setTab] = useState("followers");
   const [list, setList] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [followingIds, setFollowingIds] = useState([]);
 
-  /* 🔹 NEW: SEARCH STATE */
+  /* 🔹 SEARCH STATE */
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
 
-  /* ---------------- AUTH ---------------- */
+  /* ---------------- AUTH (MISSING BEFORE) ---------------- */
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       setUser(data?.user || null);
     });
   }, []);
 
-  /* ---------------- LOAD DATA ---------------- */
+  /* ---------------- LOAD FOLLOWING IDS ---------------- */
+  useEffect(() => {
+    if (!user) return;
+
+    supabase
+      .from("followers")
+      .select("following_id")
+      .eq("follower_id", user.id)
+      .then(({ data }) => {
+        setFollowingIds(data?.map((f) => f.following_id) || []);
+      });
+  }, [user]);
+
+  /* ---------------- LOAD CONNECTIONS ---------------- */
   useEffect(() => {
     if (!user || search) return;
     loadConnections();
@@ -81,6 +95,32 @@ export default function FollowersPage() {
     return () => clearTimeout(timer);
   }, [search]);
 
+  /* ---------------- FOLLOW / UNFOLLOW (MISSING BEFORE) ---------------- */
+  async function toggleFollow(targetId) {
+    if (!user) return;
+
+    const isFollowing = followingIds.includes(targetId);
+
+    if (isFollowing) {
+      await supabase
+        .from("followers")
+        .delete()
+        .eq("follower_id", user.id)
+        .eq("following_id", targetId);
+
+      setFollowingIds((prev) =>
+        prev.filter((id) => id !== targetId)
+      );
+    } else {
+      await supabase.from("followers").insert({
+        follower_id: user.id,
+        following_id: targetId,
+      });
+
+      setFollowingIds((prev) => [...prev, targetId]);
+    }
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-900">
       <Navbar />
@@ -115,7 +155,7 @@ export default function FollowersPage() {
           </button>
         </div>
 
-        {/* 🔍 SEARCH BAR (NEW) */}
+        {/* SEARCH BAR */}
         <div className="mb-8">
           <input
             type="text"
@@ -128,7 +168,7 @@ export default function FollowersPage() {
           />
         </div>
 
-        {/* 🔍 SEARCH RESULTS */}
+        {/* SEARCH RESULTS */}
         {search && (
           <div className="space-y-4 mb-10">
             {searching && (
@@ -157,15 +197,37 @@ export default function FollowersPage() {
                   }
                   className="w-12 h-12 rounded-full border border-slate-600"
                 />
-                <span className="text-white font-medium">
-                  {p.full_name || "Unnamed User"}
-                </span>
+
+                <div className="flex-1">
+                  <p className="text-white font-medium">
+                    {p.full_name || "Unnamed User"}
+                  </p>
+                </div>
+
+                {user?.id !== p.id && (
+  <button
+    onClick={(e) => {
+      e.preventDefault();
+      toggleFollow(p.id);
+    }}
+    className={`px-3 py-1 rounded text-xs ${
+      followingIds.includes(p.id)
+        ? "bg-slate-700 text-slate-300"
+        : "bg-blue-600 text-white"
+    }`}
+  >
+    {followingIds.includes(p.id)
+      ? "Unfollow"
+      : "+ Follow"}
+  </button>
+)}
+
               </Link>
             ))}
           </div>
         )}
 
-        {/* ORIGINAL LIST (UNCHANGED) */}
+        {/* ORIGINAL LIST */}
         {!search && (
           <>
             {loading ? (

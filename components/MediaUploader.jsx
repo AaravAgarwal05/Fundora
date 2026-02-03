@@ -3,6 +3,7 @@ import { useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 
 export default function MediaUploader({ mediaFiles, setMediaFiles }) {
+  
   const onDrop = useCallback(
     (acceptedFiles) => {
       setMediaFiles([...mediaFiles, ...acceptedFiles]);

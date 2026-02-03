@@ -13,6 +13,7 @@
     "framer-motion": "^12.26.1",
     "jspdf": "^3.0.4",
     "next": "^16.1.1",
+    "razorpay": "^2.9.6",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-dropzone": "^14.3.8",

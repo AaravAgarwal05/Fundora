@@ -18,11 +18,9 @@ export default function CreateProject() {
 
   const [categories, setCategories] = useState([]);
   const [mediaFiles, setMediaFiles] = useState([]);
-
-  // ✅ NEW: thumbnail state
   const [thumbnailFile, setThumbnailFile] = useState(null);
-
   const [team, setTeam] = useState([]);
+
   const [loading, setLoading] = useState(false);
 
   async function handleCreate() {
@@ -30,14 +28,23 @@ export default function CreateProject() {
       setLoading(true);
 
       const user = (await supabase.auth.getUser()).data.user;
-      if (!user) return alert("Please login first");
+      if (!user) {
+        alert("Please login first");
+        return;
+      }
 
+      /* 🔒 STEP 1: Thumbnail validation */
       if (!thumbnailFile) {
         alert("Please select a project thumbnail");
         return;
       }
 
-      /* 1️⃣ Create project */
+      if (thumbnailFile.size > 10 * 1024 * 1024) {
+        alert("Thumbnail should be less than 10MB");
+        return;
+      }
+
+      /* 🔒 STEP 2: Create project FIRST */
       const project = await createProject({
         title,
         short,
@@ -49,42 +56,46 @@ export default function CreateProject() {
         categories,
       });
 
-      /* 2️⃣ Upload thumbnail */
+      /* 🔒 STEP 3: Upload thumbnail using REAL project ID */
       const uploadedThumb = await uploadFileToProject(
         thumbnailFile,
         project.id,
         "thumbnail"
       );
 
-      if (uploadedThumb?.url) {
-        await supabase
-          .from("projects")
-          .update({ thumbnail: uploadedThumb.url })
-          .eq("id", project.id);
-      }
+      /* 🔒 STEP 4: Save thumbnail URL */
+      await supabase
+        .from("projects")
+        .update({ thumbnail: uploadedThumb.url })
+        .eq("id", project.id);
 
-      /* 3️⃣ Upload media files */
+      /* 🔒 STEP 5: Upload media (non-blocking) */
       const mediaRows = [];
-      for (const file of mediaFiles) {
-        const uploaded = await uploadFileToProject(file, project.id);
-        if (!uploaded) continue;
 
-        mediaRows.push({
-          project_id: project.id,
-          url: uploaded.url,
-          type: file.type.startsWith("image")
-            ? "image"
-            : file.type.startsWith("video")
-            ? "video"
-            : "document",
-        });
+      for (const file of mediaFiles) {
+        try {
+          const uploaded = await uploadFileToProject(file, project.id);
+          if (!uploaded?.url) continue;
+
+          mediaRows.push({
+            project_id: project.id,
+            url: uploaded.url,
+            type: file.type.startsWith("image")
+              ? "image"
+              : file.type.startsWith("video")
+              ? "video"
+              : "document",
+          });
+        } catch (err) {
+          console.error("Media upload failed:", err);
+        }
       }
 
       if (mediaRows.length > 0) {
         await supabase.from("media").insert(mediaRows);
       }
 
-      /* 4️⃣ Insert team */
+      /* 🔒 STEP 6: Insert team */
       if (team.length > 0) {
         await supabase.from("team_members").insert(
           team.map((t) => ({
@@ -99,7 +110,7 @@ export default function CreateProject() {
       window.location.href = `/projects/${project.id}`;
     } catch (err) {
       console.error(err);
-      alert("Error creating project");
+      alert(err?.message || "Something went wrong");
     } finally {
       setLoading(false);
     }
@@ -115,32 +126,60 @@ export default function CreateProject() {
         </h1>
 
         <div className="space-y-6 bg-slate-900/70 p-6 rounded-xl border border-slate-700">
+          <input
+            className="input"
+            placeholder="Project Title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+          />
 
-          <input className="input" placeholder="Project Title" value={title} onChange={(e)=>setTitle(e.target.value)} />
+          <input
+            className="input"
+            placeholder="Short Description"
+            value={short}
+            onChange={(e) => setShort(e.target.value)}
+          />
 
-          <input className="input" placeholder="Short Description" value={short} onChange={(e)=>setShort(e.target.value)} />
-
-          <textarea className="input" placeholder="Full Description" rows="4" value={description} onChange={(e)=>setDescription(e.target.value)} />
+          <textarea
+            className="input"
+            placeholder="Full Description"
+            rows="4"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
 
           <div className="grid grid-cols-2 gap-4">
-            <input className="input" type="number" placeholder="Goal ₹" value={goal} onChange={(e)=>setGoal(e.target.value)} />
-            <input className="input" type="date" value={deadline} onChange={(e)=>setDeadline(e.target.value)} />
+            <input
+              className="input"
+              type="number"
+              placeholder="Goal ₹"
+              value={goal}
+              onChange={(e) => setGoal(e.target.value)}
+            />
+            <input
+              className="input"
+              type="date"
+              value={deadline}
+              onChange={(e) => setDeadline(e.target.value)}
+            />
           </div>
 
           <input
             className="input"
             placeholder="Prototype URL (optional)"
             value={prototypeUrl}
-            onChange={(e)=>setPrototypeUrl(e.target.value)}
+            onChange={(e) => setPrototypeUrl(e.target.value)}
           />
 
-          {/* ✅ CATEGORY */}
-          <CategorySelector selected={categories} setSelected={setCategories} />
+          <CategorySelector
+            selected={categories}
+            setSelected={setCategories}
+          />
 
-          {/* ✅ THUMBNAIL SECTION (NEW & WORKING) */}
+          {/* THUMBNAIL */}
           <div className="space-y-2">
             <p className="text-sm font-semibold text-slate-200">
-              Project Thumbnail
+              Project Thumbnail (max 10MB)
             </p>
 
             <label className="block cursor-pointer bg-slate-800 border border-slate-700 rounded-lg p-4 text-white hover:bg-slate-700 transition">
@@ -158,24 +197,26 @@ export default function CreateProject() {
             </label>
 
             {thumbnailFile && (
-              <div className="mt-2">
-                <p className="text-xs text-slate-400 mb-1">Selected thumbnail:</p>
-                <img
-                  src={URL.createObjectURL(thumbnailFile)}
-                  className="max-w-xs rounded border"
-                  alt="Thumbnail preview"
-                />
-              </div>
+              <img
+                src={URL.createObjectURL(thumbnailFile)}
+                className="max-w-xs rounded border"
+                alt="Thumbnail preview"
+              />
             )}
           </div>
 
-          {/* MEDIA UPLOADER */}
-          <MediaUploader mediaFiles={mediaFiles} setMediaFiles={setMediaFiles} />
+          <MediaUploader
+            mediaFiles={mediaFiles}
+            setMediaFiles={setMediaFiles}
+          />
 
-          {/* TEAM */}
           <TeamEditor team={team} setTeam={setTeam} />
 
-          <button onClick={handleCreate} disabled={loading} className="btn-primary w-full">
+          <button
+            onClick={handleCreate}
+            disabled={loading}
+            className="btn-primary w-full"
+          >
             {loading ? "Creating..." : "Create Project"}
           </button>
         </div>

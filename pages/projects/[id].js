@@ -109,7 +109,7 @@ useEffect(() => {
     if (!confirm("Delete this project permanently?")) return;
     await supabase.from("projects").delete().eq("id", id);
     alert("Deleted");
-    router.push("/");
+    router.push("/explore");
   }
 
   function handleSave() {

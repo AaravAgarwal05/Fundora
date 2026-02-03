@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+//pages/creator/profile.js                                                                                                                                                                                                         import { useEffect, useState } from "react"; 
 import { supabase } from "../../lib/supabaseClient";
 import { uploadCreatorFile } from "../../lib/uploadCreatorFile";
 import Navbar from "../../components/Navbar";
@@ -147,7 +147,18 @@ export default function CreatorProfile() {
   <input
     type="file"
     accept="image/*"
-    onChange={(e) => setPhoto(e.target.files[0])}
+   onChange={(e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  if (file.size > 2 * 1024 * 1024) {
+    alert("Profile photo must be under 2MB");
+    return;
+  }
+
+  setPhoto(file);
+}}
+
     className="block w-full text-sm text-slate-300
                file:mr-4 file:py-2 file:px-4
                file:rounded-md file:border-0
@@ -198,4 +209,4 @@ export default function CreatorProfile() {
       <Footer />
     </div>
   );
-}
+}                                                                                                                                                                                                                             
