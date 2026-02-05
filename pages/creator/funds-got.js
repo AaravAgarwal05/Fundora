@@ -4,27 +4,25 @@ import Footer from "../../components/Footer";
 import { supabase } from "../../lib/supabaseClient";
 
 export default function FundsGot() {
-  const [funds, setFunds] = useState([]);
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [payments, setPayments] = useState([]);
   const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
 
-  /* ---------------- LOAD USER ---------------- */
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setUser(data?.user || null);
-    });
-  }, []);
-
-  /* ---------------- LOAD FUNDS ---------------- */
-  useEffect(() => {
-    if (!user) return;
-
     loadFunds();
-  }, [user]);
+  }, []);
 
   async function loadFunds() {
     setLoading(true);
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
     const { data, error } = await supabase
       .from("public_donations")
@@ -35,7 +33,6 @@ export default function FundsGot() {
         status,
         created_at,
         projects!inner (
-          id,
           title,
           owner_id
         )
@@ -45,15 +42,15 @@ export default function FundsGot() {
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("Funds Got error:", error);
-      setFunds([]);
+      console.error(error);
+      setPayments([]);
       setTotal(0);
       setLoading(false);
       return;
     }
 
-    setFunds(data || []);
-    setTotal((data || []).reduce((sum, f) => sum + f.amount, 0));
+    setPayments(data || []);
+    setTotal((data || []).reduce((s, p) => s + p.amount, 0));
     setLoading(false);
   }
 
@@ -66,7 +63,7 @@ export default function FundsGot() {
           Funds Got
         </h1>
 
-        <p className="text-green-400 font-semibold mb-6">
+        <p className="text-green-400 mb-6 font-semibold">
           Total Earned: ₹{total}
         </p>
 
@@ -74,31 +71,31 @@ export default function FundsGot() {
           <p className="text-slate-400">Loading funds...</p>
         )}
 
-        {!loading && funds.length === 0 && (
+        {!loading && payments.length === 0 && (
           <p className="text-slate-400">No funds received yet.</p>
         )}
 
         <div className="space-y-4">
-          {funds.map((f) => (
+          {payments.map((p) => (
             <div
-              key={f.id}
-              className="bg-slate-900 border border-slate-700 rounded-xl p-5 flex justify-between"
+              key={p.id}
+              className="bg-slate-900 border border-slate-800 rounded-lg p-4 flex justify-between"
             >
               <div>
                 <p className="text-white font-semibold">
-                  {f.projects?.title}
+                  {p.projects.title}
                 </p>
                 <p className="text-slate-400 text-sm">
-                  {new Date(f.created_at).toLocaleString()}
+                  {new Date(p.created_at).toLocaleString()}
                 </p>
               </div>
 
               <div className="text-right">
                 <p className="text-green-400 font-semibold">
-                  ₹{f.amount}
+                  ₹{p.amount}
                 </p>
                 <p className="text-xs text-slate-400 capitalize">
-                  {f.status}
+                  {p.status}
                 </p>
               </div>
             </div>

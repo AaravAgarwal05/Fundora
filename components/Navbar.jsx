@@ -2,7 +2,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { signOutUser } from "../lib/auth";
-import { FaEnvelope } from "react-icons/fa";
+import { FaEnvelope, FaChartBar } from "react-icons/fa";
 import { FiMenu } from "react-icons/fi";
 import { useRouter } from "next/router";
 
@@ -171,6 +171,16 @@ export default function Navbar({ onToggleFilters }) {
 
           {user && (
             <>
+              {/* 📊 ANALYTICS BUTTON (NEW) */}
+              <button
+                onClick={() => router.push("/creator/analytics")}
+                className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full
+                           bg-slate-800 text-slate-200 text-xs hover:bg-blue-600 hover:text-white transition"
+              >
+                <FaChartBar size={14} />
+                Analytics
+              </button>
+
               {/* MESSAGES */}
               <Link
                 href="/dm"
@@ -210,10 +220,10 @@ export default function Navbar({ onToggleFilters }) {
                     {/* ITEMS */}
                     <div className="py-2">
                       <MenuItem href={`/creator/${user.id}`} label="View Profile" />
+                      <MenuItem href="/creator/analytics" label="Analytics" />
                       <MenuItem onClick={() => router.push("/creator/payments")} label="Funds-Got" />
-                      <MenuItem onClick={() => router.push("/creator/profile")} label="Edit Payment Portal" />
                       <MenuItem href="/payments" label="My Payments" />
-                      <MenuItem href="/creator/edit" label="Edit Profile" />
+                      <MenuItem href="/creator/profile" label="Edit Payment Portal" />
                       <MenuItem href="/followers" label="Followers" />
 
                       <div className="my-2 border-t border-slate-700" />

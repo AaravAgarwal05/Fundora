@@ -1,4 +1,4 @@
-// pages/index.js
+// pages/explore.js
 import { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
@@ -14,7 +14,7 @@ export default function Home() {
   // 🔹 Sidebar toggle
   const [showFilters, setShowFilters] = useState(false);
 
-  // 🔹 Filters (unchanged logic)
+  // 🔹 Filters
   const [filters, setFilters] = useState({
     categories: [],
     minGoal: "",
@@ -22,10 +22,13 @@ export default function Home() {
     sort: "recent",
   });
 
-  // 🔹 Search (main search stays)
+  // 🔹 Search
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState([]);
 
+  const router = useRouter();
+
+  /* ================= LOAD PROJECTS ================= */
   async function loadProjects() {
     setLoading(true);
 
@@ -60,11 +63,40 @@ export default function Home() {
     setLoading(false);
   }
 
+  /* ================= INITIAL LOAD ================= */
   useEffect(() => {
     loadProjects();
   }, [filters]);
 
-  // SEARCH SUGGESTIONS (unchanged)
+  /* ================= 🔥 REALTIME FUNDING UPDATES ================= */
+  useEffect(() => {
+    const channel = supabase
+      .channel("projects-live-updates")
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "projects",
+        },
+        (payload) => {
+          setProjects((prev) =>
+            prev.map((p) =>
+              p.id === payload.new.id
+                ? { ...p, ...payload.new } // ✅ MERGE (IMPORTANT FIX)
+                : p
+            )
+          );
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  /* ================= SEARCH SUGGESTIONS ================= */
   useEffect(() => {
     if (!query.trim()) {
       setSuggestions([]);
@@ -83,41 +115,33 @@ export default function Home() {
 
     return () => clearTimeout(timer);
   }, [query]);
-const router = useRouter();
 
-const handleStartProject = async () => {
-  const { data } = await supabase.auth.getUser();
+  const handleStartProject = async () => {
+    const { data } = await supabase.auth.getUser();
 
-  if (!data?.user) {
-    router.push("/login?redirect=/create");
-  } else {
-    router.push("/create");
-  }
-};
+    if (!data?.user) {
+      router.push("/login?redirect=/create");
+    } else {
+      router.push("/create");
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar onToggleFilters={() => setShowFilters(true)} />
-        
 
       <main className="flex-1 w-full px-6 relative">
         {/* HEADER */}
         <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-white">
-              Explore projects
-            </h1>
-          </div>
+          <h1 className="text-2xl font-bold text-white">
+            Explore projects
+          </h1>
 
-          <button
-  onClick={handleStartProject}
-  className="btn-primary"
->
-  Start a project
-</button>
-
+          <button onClick={handleStartProject} className="btn-primary">
+            Start a project
+          </button>
         </div>
-
+         
         {/* SEARCH */}
         <div className="relative mb-6">
           <input
@@ -158,7 +182,7 @@ const handleStartProject = async () => {
           </div>
         )}
 
-        {/* 🔹 BACKDROP (NEW — REQUIRED) */}
+        {/* BACKDROP */}
         {showFilters && (
           <div
             className="fixed inset-0 bg-black/50 z-40"
@@ -166,7 +190,7 @@ const handleStartProject = async () => {
           />
         )}
 
-        {/* 🔹 OVERLAY SIDEBAR (UNCHANGED) */}
+        {/* FILTER SIDEBAR */}
         {showFilters && (
           <FiltersSidebar
             filters={filters}

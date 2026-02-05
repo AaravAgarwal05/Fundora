@@ -44,36 +44,16 @@ export default function ProjectCard({ project }) {
       .then(({ data }) => setCreator(data));
   }, [project?.owner_id]);
 
-  /* ---------------- BADGES ---------------- */
-  const now = new Date();
-  const createdAt = project.created_at ? new Date(project.created_at) : null;
-  const deadline = project.deadline ? new Date(project.deadline) : null;
-
-  const daysSinceCreated = createdAt
-    ? Math.floor((now - createdAt) / 86400000)
-    : null;
-
-  const daysUntilDeadline = deadline
-    ? Math.ceil((deadline - now) / 86400000)
-    : null;
-
+  /* ---------------- CALCULATIONS ---------------- */
   const fundedPercent = project.goal
-    ? Math.round(((project.pledged || 0) / project.goal) * 100)
+    ? Math.min(
+        Math.round(((project.pledged || 0) / project.goal) * 100),
+        100
+      )
     : 0;
 
-  const badges = [];
-  if (daysSinceCreated !== null && daysSinceCreated <= 7)
-    badges.push({ label: "NEW", class: "bg-green-600" });
-
-  if (fundedPercent >= 40)
-    badges.push({ label: "TRENDING", class: "bg-pink-600" });
-
-  if (daysUntilDeadline !== null && daysUntilDeadline <= 5 && daysUntilDeadline >= 0)
-    badges.push({ label: "ENDING SOON", class: "bg-yellow-600" });
-
-  const thumbnail = project.thumbnail || null;
-
   const isOwner = user?.id === project.owner_id;
+  const thumbnail = project.thumbnail || null;
 
   return (
     <div
@@ -88,18 +68,6 @@ export default function ProjectCard({ project }) {
       >
         {saved ? "🔖" : "📑"}
       </button>
-
-      {/* BADGES */}
-      <div className="absolute top-3 left-3 flex flex-col gap-1 z-10">
-        {badges.map((b, i) => (
-          <span
-            key={i}
-            className={`${b.class} text-white text-[10px] px-2 py-[2px] rounded-full`}
-          >
-            {b.label}
-          </span>
-        ))}
-      </div>
 
       {/* THUMBNAIL */}
       <div className="h-40 rounded-lg mb-3 overflow-hidden border border-slate-800 bg-slate-800">
@@ -124,11 +92,21 @@ export default function ProjectCard({ project }) {
         {project.short}
       </p>
 
-      <p className="text-xs text-slate-300 mt-3">
-        {fundedPercent}% funded — ₹{project.pledged || 0}
-      </p>
+      {/* 🔥 PROGRESS BAR */}
+      <div className="mt-3">
+        <div className="w-full bg-slate-700 rounded-full h-2 overflow-hidden">
+          <div
+            className="bg-green-500 h-2 rounded-full transition-all duration-500"
+            style={{ width: `${fundedPercent}%` }}
+          />
+        </div>
 
-      <p className="text-[11px] text-slate-500 mt-1">
+        <p className="text-xs text-slate-300 mt-1">
+          ₹{project.pledged || 0} raised of ₹{project.goal} ({fundedPercent}%)
+        </p>
+      </div>
+
+      <p className="text-[11px] text-slate-500 mt-2">
         ❤️ {saveCount} people saved this
       </p>
 
@@ -163,7 +141,6 @@ export default function ProjectCard({ project }) {
           View
         </button>
 
-        {/* ✅ FUND BUTTON ONLY IF NOT CREATOR */}
         {!isOwner && (
           <button
             onClick={(e) => {

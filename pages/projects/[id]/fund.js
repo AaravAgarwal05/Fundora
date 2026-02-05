@@ -79,15 +79,23 @@ export default function FundProject() {
       return;
     }
 
-    if (typeof window === "undefined" || !window.Razorpay || !razorpayLoaded) {
-      alert("Payment system is loading. Please wait a moment and try again.");
+    if (!razorpayLoaded || !window.Razorpay) {
+      alert("Payment system is loading. Please wait.");
       return;
     }
 
     setLoading(true);
 
     try {
-      /* 1️⃣ Create Order */
+      // 🔐 Get logged-in user
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth?.user) {
+        alert("Please login to continue");
+        setLoading(false);
+        return;
+      }
+
+      /* 1️⃣ Create Razorpay Order */
       const res = await fetch("/api/razorpay/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -97,23 +105,23 @@ export default function FundProject() {
         }),
       });
 
-      const data = await res.json();
+      const orderData = await res.json();
 
-      // ✅ CORRECT CHECK
-      if (!data?.id) {
+      if (!orderData?.orderId) {
         throw new Error("Order creation failed");
       }
 
       /* 2️⃣ Open Razorpay Checkout */
       const options = {
-        key: data.key || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-        amount: data.amount,
-        currency: data.currency,
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID, // ✅ FRONTEND KEY ONLY
+        amount: orderData.amount,
+        currency: orderData.currency,
         name: project?.title || "Fundora",
         description: "Support this project",
-        order_id: data.orderId || data.id,
+        order_id: orderData.orderId,
 
         handler: async function (response) {
+          /* 3️⃣ Verify Payment */
           const verifyRes = await fetch("/api/razorpay/verify", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -123,6 +131,7 @@ export default function FundProject() {
               razorpay_signature: response.razorpay_signature,
               projectId: id,
               amount: Number(amount),
+              payerId: auth.user.id, // ✅ CRITICAL FIX
             }),
           });
 
@@ -157,10 +166,7 @@ export default function FundProject() {
         src="https://checkout.razorpay.com/v1/checkout.js"
         strategy="afterInteractive"
         onLoad={() => setRazorpayLoaded(true)}
-        onError={() => {
-          console.error('Failed to load Razorpay script');
-          setRazorpayLoaded(false);
-        }}
+        onError={() => setRazorpayLoaded(false)}
       />
 
       <div className="min-h-screen flex flex-col">
@@ -203,15 +209,14 @@ export default function FundProject() {
 
             <button
               onClick={handlePayment}
-              disabled={loading || !razorpayLoaded || !amount || Number(amount) <= 0}
-              className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!razorpayLoaded || loading || Number(amount) <= 0}
+              className="btn-primary w-full disabled:opacity-50"
             >
-              {!razorpayLoaded 
-                ? "Loading Payment System..." 
-                : loading 
-                  ? "Processing..." 
-                  : "Pay with Razorpay"
-              }
+              {!razorpayLoaded
+                ? "Loading Payment System..."
+                : loading
+                ? "Processing..."
+                : "Pay with Razorpay"}
             </button>
           </div>
 
@@ -223,7 +228,7 @@ export default function FundProject() {
               </h3>
               {donors.map((d) => (
                 <div key={d.id} className="flex justify-between text-slate-300">
-                  <span>{d.name || "Anonymous"}</span>
+                  <span>{d.payer_id ? "User" : "Anonymous"}</span>
                   <span className="text-green-400">₹{d.amount}</span>
                 </div>
               ))}
