@@ -6,7 +6,7 @@ import ProjectCard from "../components/ProjectCard";
 import FiltersSidebar from "../components/FiltersSidebar";
 import { useRouter } from "next/router";
 import { supabase } from "../lib/supabaseClient";
-
+import FloatingAIChat from "@/components/FloatingAIChat";
 export default function Home() {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -90,6 +90,7 @@ export default function Home() {
         }
       )
       .subscribe();
+      
 
     return () => {
       supabase.removeChannel(channel);
@@ -201,6 +202,7 @@ export default function Home() {
       </main>
 
       <Footer />
+      <FloatingAIChat />
     </div>
   );
 }

@@ -1,0 +1,25 @@
+
+C:\Users\Lenovo\crowdfund
+├── clean_structure.txt
+├── components
+├── context
+├── eslint.config.mjs
+├── hooks
+├── jsconfig.json
+├── lib
+├── next.config.mjs
+├── node_modules
+├── package-lock.json
+├── package.json
+├── pages
+├── postcss.config.mjs
+├── public
+├── README.md
+├── styles
+└── tailwind.config.js
+
+directory: 8 file: 9
+
+
+
+[2K[1G

@@ -20,6 +20,7 @@ export default function useProjectChat(projectId) {
           content,
           sender_id,
           created_at,
+          is_ai,
           profiles:sender_id (
             full_name,
             avatar_url
@@ -60,18 +61,46 @@ export default function useProjectChat(projectId) {
     };
   }, [projectId]);
 
-  /* SEND MESSAGE */
+  /* SEND MESSAGE + AI RESPONSE */
   async function sendMessage(text) {
     if (!text.trim()) return;
 
     const user = (await supabase.auth.getUser()).data.user;
     if (!user) return;
 
+    // 1️⃣ Save user message
     await supabase.from("messages").insert({
       project_id: projectId,
       sender_id: user.id,
       content: text,
+      is_ai: false,
     });
+
+    try {
+      // 2️⃣ Call AI Agent API
+      const res = await fetch("/api/ai/agent", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message: text,
+          projectId,
+        }),
+      });
+
+      const data = await res.json();
+
+      // 3️⃣ Save AI response
+      await supabase.from("messages").insert({
+        project_id: projectId,
+        content: data.reply,
+        is_ai: true,
+      });
+
+    } catch (err) {
+      console.error("AI Error:", err);
+    }
   }
 
   return {

@@ -4,6 +4,7 @@ import Footer from "../../components/Footer";
 import MediaUploader from "../../components/MediaUploader";
 import TeamEditor from "../../components/TeamEditor";
 import CategorySelector from "../../components/CategorySelector";
+import CampaignAIGenerator from "../../components/CampaignAIGenerator"; // ✅ NEW
 import { supabase } from "../../lib/supabaseClient";
 import { uploadFileToProject } from "../../lib/storage";
 import { createProject } from "../../lib/projects";
@@ -56,7 +57,7 @@ export default function CreateProject() {
         categories,
       });
 
-      /* 🔒 STEP 3: Upload thumbnail using REAL project ID */
+      /* 🔒 STEP 3: Upload thumbnail */
       const uploadedThumb = await uploadFileToProject(
         thumbnailFile,
         project.id,
@@ -69,7 +70,7 @@ export default function CreateProject() {
         .update({ thumbnail: uploadedThumb.url })
         .eq("id", project.id);
 
-      /* 🔒 STEP 5: Upload media (non-blocking) */
+      /* 🔒 STEP 5: Upload media */
       const mediaRows = [];
 
       for (const file of mediaFiles) {
@@ -126,6 +127,8 @@ export default function CreateProject() {
         </h1>
 
         <div className="space-y-6 bg-slate-900/70 p-6 rounded-xl border border-slate-700">
+
+          {/* TITLE */}
           <input
             className="input"
             placeholder="Project Title"
@@ -133,6 +136,7 @@ export default function CreateProject() {
             onChange={(e) => setTitle(e.target.value)}
           />
 
+          {/* SHORT */}
           <input
             className="input"
             placeholder="Short Description"
@@ -140,6 +144,10 @@ export default function CreateProject() {
             onChange={(e) => setShort(e.target.value)}
           />
 
+          {/* ⭐ AI GENERATOR INSERTED HERE */}
+          <CampaignAIGenerator setDescription={setDescription} />
+
+          {/* DESCRIPTION */}
           <textarea
             className="input"
             placeholder="Full Description"
@@ -156,6 +164,7 @@ export default function CreateProject() {
               value={goal}
               onChange={(e) => setGoal(e.target.value)}
             />
+
             <input
               className="input"
               type="date"
@@ -219,6 +228,7 @@ export default function CreateProject() {
           >
             {loading ? "Creating..." : "Create Project"}
           </button>
+
         </div>
       </main>
 
